@@ -3,21 +3,21 @@ FROM python:3.7.6-slim-stretch
 LABEL maintainer="SQL Server Engineering Team"
 
 #SQLCMD/BCP
+
 ## apt-get and system utilities
 RUN apt-get update && apt-get install -y \
 	curl apt-transport-https debconf-utils \
     && rm -rf /var/lib/apt/lists/*
-
 RUN apt-get update && apt-get install -y gnupg2 
 
 ## adding custom MS repository
-RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-RUN curl https://packages.microsoft.com/config/ubuntu/16.04/prod.list > /etc/apt/sources.list.d/mssql-release.list
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+ && curl https://packages.microsoft.com/config/ubuntu/16.04/prod.list > /etc/apt/sources.list.d/mssql-release.list
 
 ## install SQL Server drivers and tools
-RUN apt-get update && ACCEPT_EULA=Y apt-get install -y -f msodbcsql mssql-tools 
-RUN echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc
-RUN /bin/bash -c "source ~/.bashrc"
+RUN apt-get update && ACCEPT_EULA=Y apt-get install -y -f msodbcsql mssql-tools \
+ && echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc \
+ && /bin/bash -c "source ~/.bashrc"
 
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y locales \
@@ -25,14 +25,32 @@ RUN apt-get update \
     && dpkg-reconfigure --frontend=noninteractive locales \
     && update-locale LANG=en_US.UTF-8
 
-
-#SQLPKG
-
-
 #MSSQL-CLI
 RUN pip install mssql-cli
 
 #MSSQL-Scripter
 RUN pip install mssql-scripter
+
+#SQLPKG
+## install dotnet core runtime
+RUN apt-get install libunwind8 unzip wget \
+&& wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.asc.gpg \
+&& mv microsoft.asc.gpg /etc/apt/trusted.gpg.d/ \
+&& wget -q https://packages.microsoft.com/config/debian/9/prod.list \
+&& mv prod.list /etc/apt/sources.list.d/microsoft-prod.list \
+&& chown root:root /etc/apt/trusted.gpg.d/microsoft.asc.gpg \
+&& chown root:root /etc/apt/sources.list.d/microsoft-prod.list \
+&& apt-get -y install dotnet-runtime-3.1
+
+## install sqlpackage
+RUN curl -L https://go.microsoft.com/fwlink/?linkid=2113331 -o sqlpackage.zip \
+&& mkdir /opt/sqlpackage \
+&& unzip sqlpackage.zip -d /opt/sqlpackage  \
+&& echo 'export PATH="$PATH:/opt/sqlpackage"' >> ~/.bashrc \
+&& chmod a+x /opt/sqlpackage/sqlpackage \
+&& /bin/bash -c "source ~/.bashrc"
+
+ENV PATH "/opt/sqlpackage:${PATH}"
+ENV PATH "/opt/mssql-tools/bin:${PATH}"
 
 CMD /bin/bash 
