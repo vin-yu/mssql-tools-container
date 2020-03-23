@@ -23,14 +23,16 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y locales \
     && update-locale LANG=en_US.UTF-8
 
 #MSSQL-CLI
-RUN pip install mssql-cli
+RUN echo "deb [arch=amd64] https://packages.microsoft.com/debian/9/prod stretch main" | tee /etc/apt/sources.list.d/mssql-cli.list
+RUN apt-get update
+RUN apt-get install -y mssql-cli
 
 #MSSQL-Scripter
 RUN pip install mssql-scripter
 
 #SQLPKG
 ## install dotnet core runtime
-RUN apt-get install libunwind8 unzip wget \
+RUN apt-get install -y libunwind8 unzip wget \
 && wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.asc.gpg \
 && mv microsoft.asc.gpg /etc/apt/trusted.gpg.d/ \
 && wget -q https://packages.microsoft.com/config/debian/9/prod.list \
